@@ -1,4 +1,4 @@
-# Assignment 3 for OMS6250
+﻿# Assignment 3 for OMS6250
 #
 # This defines a DistanceVector Node that can fun the Bellman-Ford
 # algorithm. The TODOs are all related to implementing BF. Students should
@@ -13,23 +13,24 @@ from helpers import *
 
 class DistanceVector(Node):
     #TODO: You need to have a structure that contains current distances
-
+   
     def __init__(self, name, topolink, neighbors):
         ''' Constructor. This is run once when the DistanceVector object is
         created at the beginning of the simulation. Initializing data structors
         specific to a DV node is done here.'''
-
+	
         super(DistanceVector, self).__init__(name, topolink, neighbors)
         #TODO: You may need to initialize your distance vector data structure
-
-
+	self.distances = {}
+	self.distances[self.name] = 0
+	
     def __str__(self):
         ''' Returns a string representation of the Distance Vector node. '''
 
         #TODO: (optional) You may want to modify this to print your distance info.
         retstr = self.name + " : links ( "
         for neighbor in self.links:
-            retstr = retstr + neighbor + " "
+            retstr = retstr + neighbor #+ " , distance = " + str(self.distances[neighbor])  + " " 
         return retstr + ")"
 
 
@@ -41,7 +42,7 @@ class DistanceVector(Node):
 
         for neighbor in self.links:
             # TODO - Build message
-            msg = None
+            msg = self.distances
 
             # Send message to neighbor
             self.send_msg(msg, neighbor)
@@ -55,16 +56,31 @@ class DistanceVector(Node):
         # TODO: The Bellman-Ford algorithm needs to be implemented here.
         # 1. Process queued messages
         # 2. Send neighbors updated distances
-
+	
+	updated = False
         # Process queue:
         for msg in self.messages:
             # TODO: Do something
-            pass
+	    print msg
+	    for node in msg.keys():
+		# all links have a weight of one
+		new_weight = msg[node] + 1 
+		if node in self.distances:
+		   # we have a link to the node in the message 
+		   if self.distances[node] > new_weight: 
+		       self.distances[node] = new_weight
+		       updated = True
+                else:
+                    self.distances[node] = new_weight
+		    updated = True
+                        
         # Empty queue
         self.messages = []
 
-        # Send neighbors udpated distances:
-        pass
+	# update links
+        print "Update Links"
+   	if updated == True:
+	    self.send_initial_messages()
 
 
     def log_distances(self):
@@ -76,10 +92,15 @@ class DistanceVector(Node):
         Taken from topo1.py '''
 
         # TODO: The string in the format above (no newlines, no whitepsace) must
-        # be defined. THen log with write_entry, example below. You'll need to 
+        # be defined. Then log with write_entry, example below. You'll need to 
         # make a loop over all the switches and call add_entry() (see helpers.py)
         # for each switch.
-        switch = "A"
-        logstring = "A0,B1,C2"
-        add_entry(switch, logstring)
-        pass
+        
+	 
+	for key in  self.topology.topodict.keys():
+	    logstring = ""
+	    switch = self.topology.topodict[key]
+	    for node in sorted(switch.distances):
+	        logstring = logstring + node + str(switch.distances[node]) + ","
+	    logstring = logstring[:-1]
+	    add_entry(switch.name, logstring)
